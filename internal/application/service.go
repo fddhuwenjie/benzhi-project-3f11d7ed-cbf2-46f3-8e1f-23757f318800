@@ -58,6 +58,26 @@ func (s *Service) Get(ctx context.Context, id string) (*domain.ConservationCase,
 func (s *Service) List(ctx context.Context) ([]domain.ConservationCase, error) {
 	return s.store.List(ctx)
 }
+
+// mutate wraps Store.Mutate and invalidates the timeline cache whenever the
+// mutation is not an idempotent replay. Rejected commands (e.g. ethics gate
+// failures) persist audit events without advancing the case revision, so a
+// revision-keyed cache would otherwise hide the newly appended events from
+// subsequent timeline reads.
+func (s *Service) mutate(ctx context.Context, id string, m CommandMeta, fn func(*domain.ConservationCase) error) (*domain.ConservationCase, bool, error) {
+	item, replayed, err := s.store.Mutate(ctx, id, m, fn)
+	if !replayed {
+		s.invalidateTimeline(id)
+	}
+	return item, replayed, err
+}
+
+func (s *Service) invalidateTimeline(id string) {
+	s.timelineMu.Lock()
+	delete(s.timelineCache, id)
+	s.timelineMu.Unlock()
+}
+
 func (s *Service) Timeline(ctx context.Context, id string) ([]domain.AuditEvent, error) {
 	item, err := s.store.Get(ctx, id)
 	if err != nil {

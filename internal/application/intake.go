@@ -32,7 +32,7 @@ func (s *Service) AddCondition(ctx context.Context, id string, c AddConditionCom
 	if err != nil {
 		return nil, false, err
 	}
-	return s.store.Mutate(ctx, id, m, func(item *domain.ConservationCase) error {
+	return s.mutate(ctx, id, m, func(item *domain.ConservationCase) error {
 		return item.AddCondition(domain.ConditionObservation{ID: s.ids(), LeafRef: c.LeafRef, RegionRef: c.RegionRef, Medium: c.Medium, DamageType: c.DamageType, Severity: c.Severity, Measurement: c.Measurement, EvidenceRef: c.EvidenceRef, RecordedBy: c.ActorID, RecordedAt: s.clock.Now()})
 	})
 }
@@ -45,5 +45,5 @@ func (s *Service) LockBaseline(ctx context.Context, id string, c WriteContext) (
 	if err != nil {
 		return nil, false, err
 	}
-	return s.store.Mutate(ctx, id, m, func(item *domain.ConservationCase) error { return item.LockBaseline() })
+	return s.mutate(ctx, id, m, func(item *domain.ConservationCase) error { return item.LockBaseline() })
 }
