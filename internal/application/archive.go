@@ -6,6 +6,9 @@ import (
 )
 
 func (s *Service) Archive(ctx context.Context, id string, c WriteContext) (*domain.ConservationCase, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if err := requireRole(c.Role, "custodian"); err != nil {
 		return nil, false, err
 	}
@@ -32,7 +35,7 @@ func (s *Service) Archive(ctx context.Context, id string, c WriteContext) (*doma
 	if err != nil {
 		return nil, false, err
 	}
-	return s.store.Mutate(context.WithoutCancel(ctx), id, m, func(item *domain.ConservationCase) error { return item.MarkArchived(manifest, s.clock.Now()) })
+	return s.store.Mutate(ctx, id, m, func(item *domain.ConservationCase) error { return item.MarkArchived(manifest, s.clock.Now()) })
 }
 func (s *Service) ReadArchive(ctx context.Context, id string) ([]byte, error) {
 	item, err := s.store.Get(ctx, id)

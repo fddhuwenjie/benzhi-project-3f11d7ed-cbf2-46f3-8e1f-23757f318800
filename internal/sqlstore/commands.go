@@ -10,6 +10,9 @@ import (
 )
 
 func (s *Store) Create(ctx context.Context, m application.CommandMeta, item *domain.ConservationCase) (result *domain.ConservationCase, replayed bool, err error) {
+	if err = ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, false, err
@@ -19,6 +22,9 @@ func (s *Store) Create(ctx context.Context, m application.CommandMeta, item *dom
 			_ = tx.Rollback()
 		}
 	}()
+	if err = ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if old, ok, e := replay(tx, m); e != nil {
 		return nil, false, e
 	} else if ok {
@@ -45,6 +51,9 @@ func (s *Store) Create(ctx context.Context, m application.CommandMeta, item *dom
 	if err = saveReplay(tx, m, item); err != nil {
 		return nil, false, err
 	}
+	if err = ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if err = tx.Commit(); err != nil {
 		return nil, false, err
 	}
@@ -52,6 +61,9 @@ func (s *Store) Create(ctx context.Context, m application.CommandMeta, item *dom
 }
 
 func (s *Store) Mutate(ctx context.Context, id string, m application.CommandMeta, fn func(*domain.ConservationCase) error) (result *domain.ConservationCase, replayed bool, err error) {
+	if err = ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, false, err
@@ -61,6 +73,9 @@ func (s *Store) Mutate(ctx context.Context, id string, m application.CommandMeta
 			_ = tx.Rollback()
 		}
 	}()
+	if err = ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if old, ok, e := replay(tx, m); e != nil {
 		return nil, false, e
 	} else if ok {
@@ -95,6 +110,9 @@ func (s *Store) Mutate(ctx context.Context, id string, m application.CommandMeta
 			if err = appendAuditWithReasonTx(ctx, tx, &item, m, mutationErr.Error()); err != nil {
 				return nil, false, err
 			}
+			if err = ctx.Err(); err != nil {
+				return nil, false, err
+			}
 			if err = tx.Commit(); err != nil {
 				return nil, false, err
 			}
@@ -124,6 +142,9 @@ func (s *Store) Mutate(ctx context.Context, id string, m application.CommandMeta
 		return nil, false, err
 	}
 	if err = saveReplay(tx, m, &item); err != nil {
+		return nil, false, err
+	}
+	if err = ctx.Err(); err != nil {
 		return nil, false, err
 	}
 	if err = tx.Commit(); err != nil {

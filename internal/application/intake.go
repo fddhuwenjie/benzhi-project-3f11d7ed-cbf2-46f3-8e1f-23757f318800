@@ -6,6 +6,9 @@ import (
 )
 
 func (s *Service) CreateCase(ctx context.Context, c CreateCaseCommand) (*domain.ConservationCase, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if err := requireRole(c.Role, "conservator"); err != nil {
 		return nil, false, err
 	}
@@ -21,10 +24,13 @@ func (s *Service) CreateCase(ctx context.Context, c CreateCaseCommand) (*domain.
 	if err != nil {
 		return nil, false, err
 	}
-	return s.store.Create(context.WithoutCancel(ctx), m, item)
+	return s.store.Create(ctx, m, item)
 }
 
 func (s *Service) AddCondition(ctx context.Context, id string, c AddConditionCommand) (*domain.ConservationCase, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if err := requireRole(c.Role, "conservator"); err != nil {
 		return nil, false, err
 	}
@@ -32,12 +38,15 @@ func (s *Service) AddCondition(ctx context.Context, id string, c AddConditionCom
 	if err != nil {
 		return nil, false, err
 	}
-	return s.store.Mutate(context.WithoutCancel(ctx), id, m, func(item *domain.ConservationCase) error {
+	return s.store.Mutate(ctx, id, m, func(item *domain.ConservationCase) error {
 		return item.AddCondition(domain.ConditionObservation{ID: s.ids(), LeafRef: c.LeafRef, RegionRef: c.RegionRef, Medium: c.Medium, DamageType: c.DamageType, Severity: c.Severity, Measurement: c.Measurement, EvidenceRef: c.EvidenceRef, RecordedBy: c.ActorID, RecordedAt: s.clock.Now()})
 	})
 }
 
 func (s *Service) LockBaseline(ctx context.Context, id string, c WriteContext) (*domain.ConservationCase, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
 	if err := requireRole(c.Role, "conservator"); err != nil {
 		return nil, false, err
 	}
@@ -45,5 +54,5 @@ func (s *Service) LockBaseline(ctx context.Context, id string, c WriteContext) (
 	if err != nil {
 		return nil, false, err
 	}
-	return s.store.Mutate(context.WithoutCancel(ctx), id, m, func(item *domain.ConservationCase) error { return item.LockBaseline() })
+	return s.store.Mutate(ctx, id, m, func(item *domain.ConservationCase) error { return item.LockBaseline() })
 }

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,6 +79,10 @@ func writeError(w http.ResponseWriter, err error) {
 		status = 500
 		code = "audit_corrupt"
 		message = err.Error()
+	} else if errors.Is(err, context.Canceled) {
+		status = 499
+		code = "client_closed"
+		message = "请求已被取消"
 	}
 	var out errorBody
 	out.Error.Code = code
