@@ -31,13 +31,24 @@ func (s *Store) List(ctx context.Context) ([]domain.ConservationCase, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := []domain.ConservationCase{}
+	bodies := [][]byte{}
 	for rows.Next() {
 		var b []byte
 		if err := rows.Scan(&b); err != nil {
+			rows.Close()
 			return nil, err
 		}
+		bodies = append(bodies, b)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	out := []domain.ConservationCase{}
+	for _, b := range bodies {
 		var item domain.ConservationCase
 		if err := json.Unmarshal(b, &item); err != nil {
 			return nil, err
@@ -50,5 +61,5 @@ func (s *Store) List(ctx context.Context) ([]domain.ConservationCase, error) {
 		}
 		out = append(out, item)
 	}
-	return out, rows.Err()
+	return out, nil
 }
