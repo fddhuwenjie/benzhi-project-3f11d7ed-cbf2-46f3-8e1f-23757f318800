@@ -7,17 +7,26 @@ import (
 	"manuscript-conservation-gate/internal/domain"
 )
 
-func replay(tx *sql.Tx, m application.CommandMeta) (*domain.ConservationCase, bool, error) {
+// replay returns the previously persisted aggregate for an idempotent request.
+// The target case_id participates in the idempotency judgement for mutations:
+// a replay is only served when the stored response belongs to the same target
+// case. When the same request_id and fingerprint are replayed against a
+// different case, ErrIdempotencyConflict is returned so that no foreign
+// response is leaked and the target case remains unchanged. For Create, the
+// case id is generated server-side and is not part of the request, so an empty
+// caseID is passed and only the fingerprint is compared.
+func replay(tx *sql.Tx, m application.CommandMeta, caseID string) (*domain.ConservationCase, bool, error) {
 	var fp string
+	var storedCaseID string
 	var body []byte
-	err := tx.QueryRow(`SELECT fingerprint,response FROM idempotency WHERE request_id=?`, m.RequestID).Scan(&fp, &body)
+	err := tx.QueryRow(`SELECT fingerprint,case_id,response FROM idempotency WHERE request_id=?`, m.RequestID).Scan(&fp, &storedCaseID, &body)
 	if err == sql.ErrNoRows {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
-	if fp != m.Fingerprint {
+	if fp != m.Fingerprint || (caseID != "" && storedCaseID != caseID) {
 		return nil, false, application.ErrIdempotencyConflict
 	}
 	var item domain.ConservationCase

@@ -19,7 +19,7 @@ func (s *Store) Create(ctx context.Context, m application.CommandMeta, item *dom
 			_ = tx.Rollback()
 		}
 	}()
-	if old, ok, e := replay(tx, m); e != nil {
+	if old, ok, e := replay(tx, m, ""); e != nil {
 		return nil, false, e
 	} else if ok {
 		_ = tx.Rollback()
@@ -61,7 +61,7 @@ func (s *Store) Mutate(ctx context.Context, id string, m application.CommandMeta
 			_ = tx.Rollback()
 		}
 	}()
-	if old, ok, e := replay(tx, m); e != nil {
+	if old, ok, e := replay(tx, m, id); e != nil {
 		return nil, false, e
 	} else if ok {
 		_ = tx.Rollback()
