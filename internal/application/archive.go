@@ -52,19 +52,9 @@ func (s *Service) VerifyArchive(ctx context.Context, id string) (VerificationRes
 	if item.State != domain.StateArchived {
 		return VerificationResult{}, domain.Conflict("个案尚未封存")
 	}
-	if cached, ok := s.cachedArchiveVerification(id, item.Revision); ok {
-		return cached, nil
-	}
 	events, err := s.store.Events(ctx, id)
 	if err != nil {
 		return VerificationResult{}, err
 	}
-	result, err := s.evidence.Verify(ctx, item, events)
-	if err != nil {
-		return VerificationResult{}, err
-	}
-	if result.Valid {
-		s.cacheArchiveVerification(id, item.Revision, result)
-	}
-	return result, nil
+	return s.evidence.Verify(ctx, item, events)
 }

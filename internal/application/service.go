@@ -7,44 +7,22 @@ import (
 	"encoding/json"
 	"manuscript-conservation-gate/internal/domain"
 	"strings"
-	"sync"
 )
 
 type Service struct {
-	store                 Store
-	evidence              EvidencePort
-	clock                 Clock
-	ids                   func() string
-	archiveVerificationMu sync.RWMutex
-	archiveVerifications  map[string]archiveVerificationEntry
-}
-
-type archiveVerificationEntry struct {
-	revision int64
-	result   VerificationResult
+	store    Store
+	evidence EvidencePort
+	clock    Clock
+	ids      func() string
 }
 
 func NewService(store Store, evidence EvidencePort, clock Clock, idGenerator func() string) *Service {
 	return &Service{
-		store:                store,
-		evidence:             evidence,
-		clock:                clock,
-		ids:                  idGenerator,
-		archiveVerifications: make(map[string]archiveVerificationEntry),
+		store:    store,
+		evidence: evidence,
+		clock:    clock,
+		ids:      idGenerator,
 	}
-}
-
-func (s *Service) cachedArchiveVerification(id string, revision int64) (VerificationResult, bool) {
-	s.archiveVerificationMu.RLock()
-	defer s.archiveVerificationMu.RUnlock()
-	entry, ok := s.archiveVerifications[id]
-	return entry.result, ok && entry.revision == revision
-}
-
-func (s *Service) cacheArchiveVerification(id string, revision int64, result VerificationResult) {
-	s.archiveVerificationMu.Lock()
-	defer s.archiveVerificationMu.Unlock()
-	s.archiveVerifications[id] = archiveVerificationEntry{revision: revision, result: result}
 }
 func fingerprint(v any) string {
 	b, _ := json.Marshal(v)
